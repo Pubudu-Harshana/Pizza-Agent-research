@@ -1,0 +1,21 @@
+# Virtual environment
+venv/
+ENV/
+env/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local database / vector store
+chrome_langchain_db/
+
+# Environment variables
+.env
+
+# IDE / Editor folders
+.vscode/
+.idea/
