@@ -1,6 +1,15 @@
+import sys
+import io
+
+# Force stdout/stderr to UTF-8 to prevent Windows UnicodeEncodeError on emojis
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 """
 main.py — Enhanced Multi-Step Pizza Restaurant Agent
+
 =====================================================
+
 WHAT CHANGED FROM THE ORIGINAL:
   1. Conversation Memory  — Agent remembers previous turns
   2. State Machine        — Agent tracks WHERE in the workflow it is
