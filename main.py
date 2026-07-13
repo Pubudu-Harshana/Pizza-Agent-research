@@ -2,8 +2,8 @@ import sys
 import io
 
 # Force stdout/stderr to UTF-8 to prevent Windows UnicodeEncodeError on emojis
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', write_through=True)
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', write_through=True)
 
 """
 main.py — Enhanced Multi-Step Pizza Restaurant Agent
@@ -24,15 +24,26 @@ WHY THIS MATTERS FOR THE RESEARCH:
     - Trigger unexpected state transitions
 """
 
-from langchain_ollama.llms import OllamaLLM
-from langchain_core.prompts import ChatPromptTemplate
-from vector import retriever
+import os
+
+# ============================================================
+# MOCK MODE — set PIZZA_MOCK_LLM=1 to skip the real LLM.
+# This makes the RL fuzzer train instantly without needing
+# the Ollama server. All state machine + tool logic still runs.
+# ============================================================
+MOCK_MODE = os.environ.get("PIZZA_MOCK_LLM", "0") == "1"
+
+if not MOCK_MODE:
+    from langchain_ollama.llms import OllamaLLM
+    from langchain_core.prompts import ChatPromptTemplate
+    from vector import retriever
 from tools import get_menu, place_order, check_order_status
 
 # ============================================================
 # 1. MODEL SETUP (same as before)
 # ============================================================
-model = OllamaLLM(model="llama3.2")
+if not MOCK_MODE:
+    model = OllamaLLM(model="llama3.2")
 
 # ============================================================
 # 2. CONVERSATION MEMORY
@@ -155,8 +166,9 @@ Orders Placed  : {orders}
 Answer naturally and helpfully. Reference the conversation history when it's relevant to the question.
 """
 
-prompt = ChatPromptTemplate.from_template(template)
-chain = prompt | model
+if not MOCK_MODE:
+    prompt = ChatPromptTemplate.from_template(template)
+    chain = prompt | model
 
 
 # ============================================================
@@ -302,18 +314,22 @@ while True:
 
     else:
         # ── Normal RAG + LLM path ─────────────────────────────
-        # Step 1: Retrieve the 5 most relevant reviews
-        reviews = retriever.invoke(user_input)
+        if MOCK_MODE:
+            # ⚡ MOCK: return instant response — no Ollama call needed
+            result = "[MOCK] I'm a pizza assistant. I can help you order pizza, check the menu, or track your order."
+        else:
+            # Step 1: Retrieve the 5 most relevant reviews
+            reviews = retriever.invoke(user_input)
 
-        # Step 2: Build the prompt with history + state + reviews
-        result = chain.invoke({
-            "reviews": reviews,
-            "question": user_input,
-            "history": format_history(),
-            "mode":    agent_state["mode"],
-            "turn":    agent_state["turns"],
-            "orders":  agent_state["placed_orders"] if agent_state["placed_orders"] else "None",
-        })
+            # Step 2: Build the prompt with history + state + reviews
+            result = chain.invoke({
+                "reviews": reviews,
+                "question": user_input,
+                "history": format_history(),
+                "mode":    agent_state["mode"],
+                "turn":    agent_state["turns"],
+                "orders":  agent_state["placed_orders"] if agent_state["placed_orders"] else "None",
+            })
 
         # Step 3: Print and remember the answer
         print(f"\n  Agent: {result}\n")
