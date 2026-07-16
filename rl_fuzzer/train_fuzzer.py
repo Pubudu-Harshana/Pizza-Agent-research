@@ -20,8 +20,9 @@ def main():
     # Use PPO, the standard reliable RL algorithm
     model = PPO("MlpPolicy", env, verbose=1, learning_rate=0.001)
     
-    # Increased from 20 to 2000 — mock mode makes this fast
-    TIMESTEPS = 2000
+    # Raised to 20 000 — gives the agent enough experience to learn
+    # that repeating the same payload is penalised and diversity pays off.
+    TIMESTEPS = 20000
     
     print(f"Training for {TIMESTEPS} timesteps (this may take a while)...")
     model.learn(total_timesteps=TIMESTEPS)
